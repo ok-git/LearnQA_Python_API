@@ -1,6 +1,7 @@
 import requests
 from lib.logger import Logger
 import allure
+from environment import ENV_OBJECT
 
 
 class MyRequests:
@@ -26,7 +27,7 @@ class MyRequests:
 
     @staticmethod
     def _send(uri: str, data: dict, headers: dict, cookies: dict, method: str):
-        url = f'https://playground.learnqa.ru/api{uri}'
+        url = f'{ENV_OBJECT.get_base_url()}{uri}'
 
         if headers is None:
             headers = {}
