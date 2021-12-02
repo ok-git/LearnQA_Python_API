@@ -1,9 +1,16 @@
 from lib.base_case import BaseCase
 from lib.assertions import Assertions
 from lib.my_requests import MyRequests
+import allure
 
 
 class TestUserDelete(BaseCase):
+    BUG_TRACKER_LINK = 'https://bugtracker_link'
+
+    @allure.link(BUG_TRACKER_LINK, name='Bug report')
+    @allure.title("Delete user with user id 2")
+    @allure.description('This test checks that it impossible to delete user with id 2')
+    @allure.severity(allure.severity_level.CRITICAL)
     def test_delete_user_id_2(self):
         data = {
             'email': 'vinkotov@example.com',
@@ -24,44 +31,54 @@ class TestUserDelete(BaseCase):
         assert response2.content.decode('utf-8') == "Please, do not delete test users with ID 1, 2, 3, 4 or 5.", \
             f'Unexpected response content {response2.content}'
 
+    @allure.title("Delete just created user")
+    @allure.description('This test successfully deletes just created user')
+    @allure.severity(allure.severity_level.NORMAL)
     def test_delete_just_created_user(self):
         # REGISTER
-        register_data = self.prepare_registration_data()
-        response1 = MyRequests.post('/user', data=register_data)
+        with allure.step(f"REGISTER new user"):
+            register_data = self.prepare_registration_data()
+            response1 = MyRequests.post('/user', data=register_data)
 
-        Assertions.assert_status_code(response1, 200)
-        Assertions.assert_json_has_key(response1, 'id')
+            Assertions.assert_status_code(response1, 200)
+            Assertions.assert_json_has_key(response1, 'id')
 
-        email = register_data['email']
-        password = register_data['password']
-        user_id = self.get_json_value(response1, 'id')
+            email = register_data['email']
+            password = register_data['password']
+            user_id = self.get_json_value(response1, 'id')
 
         # LOGIN
-        login_data = {
-            'email': email,
-            'password': password
-        }
-        response2 = MyRequests.post('/user/login', data=login_data)
+        with allure.step(f"LOGIN new user id {user_id}"):
+            login_data = {
+                'email': email,
+                'password': password
+            }
+            response2 = MyRequests.post('/user/login', data=login_data)
 
-        auth_sid = self.get_cookie(response2, "auth_sid")
-        token = self.get_header(response2, "x-csrf-token")
+            auth_sid = self.get_cookie(response2, "auth_sid")
+            token = self.get_header(response2, "x-csrf-token")
 
         # DELETE
-        response3 = MyRequests.delete(f'/user/{user_id}',
-                                      headers={"x-csrf-token": token},
-                                      cookies={"auth_sid": auth_sid})
+        with allure.step(f"DELETE new user id {user_id}"):
+            response3 = MyRequests.delete(f'/user/{user_id}',
+                                          headers={"x-csrf-token": token},
+                                          cookies={"auth_sid": auth_sid})
 
         Assertions.assert_status_code(response3, 200)
 
         # GET
-        response4 = MyRequests.get(f'/user/{user_id}',
-                                   headers={"x-csrf-token": token},
-                                   cookies={"auth_sid": auth_sid})
+        with allure.step(f"GET new user {user_id}"):
+            response4 = MyRequests.get(f'/user/{user_id}',
+                                       headers={"x-csrf-token": token},
+                                       cookies={"auth_sid": auth_sid})
 
         Assertions.assert_status_code(response4, 404)
         assert response4.content.decode('utf-8') == "User not found", \
             f'Unexpected response content {response4.content}'
 
+    @allure.title("Delete user after auth as another user")
+    @allure.description('This test checks that it impossible to delete user from another auth user')
+    @allure.severity(allure.severity_level.CRITICAL)
     def test_delete_auth_as_another_user(self):
         # REGISTER user_1
         register_data = self.prepare_registration_data()
